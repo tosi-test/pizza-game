@@ -1,0 +1,17 @@
+html,
+body {
+  margin: 0;
+  min-width: 100%;
+  min-height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: #101820;
+}
+
+#game-canvas {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}
