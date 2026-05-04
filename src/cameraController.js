@@ -14,6 +14,8 @@ export class CameraController {
     maxPitch = 0.35,
     mouseSensitivity = 0.0025,
     followSmoothing = 12,
+    floorY = 0,
+    floorClearance = 0.35,
   } = {}) {
     this.camera = camera;
     this.target = target;
@@ -26,6 +28,8 @@ export class CameraController {
     this.yaw = target.rotation.y;
     this.mouseSensitivity = mouseSensitivity;
     this.followSmoothing = followSmoothing;
+    this.floorY = floorY;
+    this.floorClearance = floorClearance;
   }
 
   applyPointerDelta(pointerDelta) {
@@ -45,9 +49,11 @@ export class CameraController {
     );
 
     targetPosition.copy(this.target.position).add(orbitOffset);
+    targetPosition.y = Math.max(targetPosition.y, this.floorY + this.floorClearance);
 
     const followAlpha = 1 - Math.exp(-this.followSmoothing * deltaTime);
     this.camera.position.lerp(targetPosition, followAlpha);
+    this.camera.position.y = Math.max(this.camera.position.y, this.floorY + this.floorClearance);
 
     lookTarget.copy(this.target.position);
     lookTarget.y += this.lookHeight;
