@@ -13,6 +13,7 @@ export class CameraController {
     minPitch = -0.85,
     maxPitch = 0.35,
     mouseSensitivity = 0.0025,
+    invertY = true,
     followSmoothing = 12,
     floorY = 0,
     floorClearance = 0.35,
@@ -27,6 +28,7 @@ export class CameraController {
     this.maxPitch = maxPitch;
     this.yaw = target.rotation.y;
     this.mouseSensitivity = mouseSensitivity;
+    this.invertY = invertY;
     this.followSmoothing = followSmoothing;
     this.floorY = floorY;
     this.floorClearance = floorClearance;
@@ -34,8 +36,10 @@ export class CameraController {
 
   applyPointerDelta(pointerDelta) {
     this.yaw -= pointerDelta.x * this.mouseSensitivity;
+    const pitchDirection = this.invertY ? 1 : -1;
+
     this.pitch = THREE.MathUtils.clamp(
-      this.pitch - pointerDelta.y * this.mouseSensitivity,
+      this.pitch + pointerDelta.y * this.mouseSensitivity * pitchDirection,
       this.minPitch,
       this.maxPitch,
     );
