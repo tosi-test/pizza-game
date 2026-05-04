@@ -1,5 +1,9 @@
 import * as THREE from '/node_modules/three/build/three.module.js';
 
+import { CameraController } from './cameraController.js';
+import { InputController } from './input.js';
+import { PlayerController } from './playerController.js';
+
 const canvas = document.querySelector('#game-canvas');
 
 const scene = new THREE.Scene();
@@ -106,44 +110,10 @@ addBox(house, 'doorway threshold marker', new THREE.Vector3(3.5, 0.08, 0.8), new
 
 scene.add(house);
 
-const keysPressed = new Set();
-const movementSpeed = 5;
-const turnSpeed = 2.8;
+const inputController = new InputController(canvas);
+const playerController = new PlayerController(player, { movementSpeed: 5 });
+const cameraController = new CameraController(camera, player);
 const clock = new THREE.Clock();
-
-window.addEventListener('keydown', (event) => {
-  keysPressed.add(event.code);
-});
-
-window.addEventListener('keyup', (event) => {
-  keysPressed.delete(event.code);
-});
-
-function updatePlayer(deltaTime) {
-  if (keysPressed.has('KeyA') || keysPressed.has('ArrowLeft')) {
-    player.rotation.y += turnSpeed * deltaTime;
-  }
-
-  if (keysPressed.has('KeyD') || keysPressed.has('ArrowRight')) {
-    player.rotation.y -= turnSpeed * deltaTime;
-  }
-
-  const forwardInput =
-    Number(keysPressed.has('KeyW') || keysPressed.has('ArrowUp')) -
-    Number(keysPressed.has('KeyS') || keysPressed.has('ArrowDown'));
-
-  if (forwardInput !== 0) {
-    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(player.quaternion);
-    player.position.addScaledVector(forward, forwardInput * movementSpeed * deltaTime);
-  }
-}
-
-function updateCamera() {
-  const cameraOffset = new THREE.Vector3(0, 4.5, 8).applyQuaternion(player.quaternion);
-  const targetPosition = player.position.clone().add(cameraOffset);
-  camera.position.lerp(targetPosition, 0.16);
-  camera.lookAt(player.position.x, player.position.y + 1.1, player.position.z);
-}
 
 function resizeRenderer() {
   const width = window.innerWidth;
@@ -164,8 +134,9 @@ function render() {
   const deltaTime = Math.min(clock.getDelta(), 0.05);
 
   resizeRenderer();
-  updatePlayer(deltaTime);
-  updateCamera();
+  cameraController.applyPointerDelta(inputController.consumePointerDelta());
+  playerController.update(deltaTime, inputController.getMovementVector(), cameraController.getYaw());
+  cameraController.update(deltaTime);
   renderer.render(scene, camera);
 
   requestAnimationFrame(render);
