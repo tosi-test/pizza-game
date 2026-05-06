@@ -10,8 +10,8 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87b9ff);
 
 const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 250);
-camera.position.set(0, 5, 13);
-camera.lookAt(0, 1, 0);
+camera.position.set(0, 1.45, 8);
+camera.lookAt(0, 1.45, 7);
 
 const renderer = new THREE.WebGLRenderer({
   antialias: true,
@@ -47,6 +47,7 @@ const playerBodyMaterial = new THREE.MeshStandardMaterial({ color: 0xffc857 });
 const playerBody = new THREE.Mesh(playerBodyGeometry, playerBodyMaterial);
 playerBody.position.y = 0.8;
 playerBody.castShadow = true;
+playerBody.visible = false;
 player.add(playerBody);
 
 const forwardMarkerGeometry = new THREE.ConeGeometry(0.28, 0.75, 4);
@@ -56,9 +57,19 @@ forwardMarker.name = 'Forward direction marker';
 forwardMarker.position.set(0, 1.15, -0.85);
 forwardMarker.rotation.x = -Math.PI / 2;
 forwardMarker.castShadow = true;
+forwardMarker.visible = false;
 player.add(forwardMarker);
 
 scene.add(player);
+
+const handMaterial = new THREE.MeshStandardMaterial({ color: 0xf1c27d, roughness: 0.75 });
+const leftHand = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 16), handMaterial);
+leftHand.position.set(-0.32, -0.3, -0.65);
+const rightHand = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 16), handMaterial);
+rightHand.position.set(0.32, -0.3, -0.65);
+camera.add(leftHand);
+camera.add(rightHand);
+scene.add(camera);
 
 const house = new THREE.Group();
 house.name = 'House made from separate wall boxes with doorway opening';
