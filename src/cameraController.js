@@ -11,7 +11,7 @@ export class CameraController {
     minPitch = -1.25,
     maxPitch = 1.25,
     mouseSensitivity = 0.0025,
-    invertY = true,
+    invertY = false,
     followSmoothing = 20,
   } = {}) {
     this.camera = camera;

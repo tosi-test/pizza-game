@@ -1,6 +1,8 @@
 import * as THREE from '/node_modules/three/build/three.module.js';
 
 import { CameraController } from './cameraController.js';
+import { BuildingController } from './buildingController.js';
+import { InteractController } from './interactController.js';
 import { InputController } from './input.js';
 import { PlayerController } from './playerController.js';
 
@@ -133,6 +135,18 @@ const houseColliders = collidableMeshes.map((mesh) => new THREE.Box3().setFromOb
 const inputController = new InputController(canvas);
 const playerController = new PlayerController(player, { movementSpeed: 5, colliders: houseColliders });
 const cameraController = new CameraController(camera, player);
+const buildingController = new BuildingController({
+  scene,
+  camera,
+  player,
+  canvas,
+  colliders: houseColliders,
+});
+const interactController = new InteractController({
+  player,
+  canvas,
+  buildingController,
+});
 const clock = new THREE.Clock();
 
 function resizeRenderer() {
@@ -154,9 +168,15 @@ function render() {
   const deltaTime = Math.min(clock.getDelta(), 0.05);
 
   resizeRenderer();
-  cameraController.applyPointerDelta(inputController.consumePointerDelta());
-  playerController.update(deltaTime, inputController.getMovementVector(), cameraController.getYaw());
-  cameraController.update(deltaTime);
+  buildingController.update(inputController);
+  interactController.update(inputController);
+  if (buildingController.isUsingMenu() || interactController.isUsingPanel()) {
+    inputController.consumePointerDelta();
+  } else {
+    cameraController.applyPointerDelta(inputController.consumePointerDelta());
+    playerController.update(deltaTime, inputController.getMovementVector(), cameraController.getYaw());
+    cameraController.update(deltaTime);
+  }
   renderer.render(scene, camera);
 
   requestAnimationFrame(render);

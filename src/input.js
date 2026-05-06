@@ -1,10 +1,13 @@
 const MOVEMENT_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD']);
+const ACTION_KEYS = new Set(['KeyB', 'KeyE', 'Escape']);
 
 export class InputController {
   constructor(targetElement) {
     this.targetElement = targetElement;
     this.keysPressed = new Set();
+    this.keysDownThisFrame = new Set();
     this.pointerDelta = { x: 0, y: 0 };
+    this.primaryClicks = 0;
     this.isPointerLocked = false;
 
     this.handleKeyDown = this.handleKeyDown.bind(this);
@@ -21,15 +24,18 @@ export class InputController {
   }
 
   handleKeyDown(event) {
-    if (MOVEMENT_KEYS.has(event.code)) {
+    if (MOVEMENT_KEYS.has(event.code) || ACTION_KEYS.has(event.code)) {
       event.preventDefault();
     }
 
+    if (!this.keysPressed.has(event.code)) {
+      this.keysDownThisFrame.add(event.code);
+    }
     this.keysPressed.add(event.code);
   }
 
   handleKeyUp(event) {
-    if (MOVEMENT_KEYS.has(event.code)) {
+    if (MOVEMENT_KEYS.has(event.code) || ACTION_KEYS.has(event.code)) {
       event.preventDefault();
     }
 
@@ -52,7 +58,10 @@ export class InputController {
   handleCanvasClick() {
     if (!this.isPointerLocked) {
       this.targetElement.requestPointerLock();
+      return;
     }
+
+    this.primaryClicks += 1;
   }
 
   getMovementVector() {
@@ -67,6 +76,18 @@ export class InputController {
     this.pointerDelta.x = 0;
     this.pointerDelta.y = 0;
     return delta;
+  }
+
+  consumeKeyDown(code) {
+    const wasPressed = this.keysDownThisFrame.has(code);
+    this.keysDownThisFrame.delete(code);
+    return wasPressed;
+  }
+
+  consumePrimaryClick() {
+    const clicks = this.primaryClicks;
+    this.primaryClicks = 0;
+    return clicks;
   }
 
   dispose() {
