@@ -74,18 +74,22 @@ scene.add(camera);
 const house = new THREE.Group();
 house.name = 'House made from separate wall boxes with doorway opening';
 house.position.set(0, 0, -12);
+const collidableMeshes = [];
 
 const wallMaterial = new THREE.MeshStandardMaterial({ color: 0xba6b42, roughness: 0.85 });
 const roofMaterial = new THREE.MeshStandardMaterial({ color: 0x5c2f1d, roughness: 0.8 });
 const trimMaterial = new THREE.MeshStandardMaterial({ color: 0xf5deb3, roughness: 0.75 });
 
-function addBox(parent, name, size, position, material) {
+function addBox(parent, name, size, position, material, { collidable = false } = {}) {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(size.x, size.y, size.z), material);
   mesh.name = name;
   mesh.position.copy(position);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   parent.add(mesh);
+  if (collidable) {
+    collidableMeshes.push(mesh);
+  }
   return mesh;
 }
 
@@ -97,6 +101,7 @@ addBox(
   new THREE.Vector3(4.25, 5, 0.35),
   new THREE.Vector3(-3.875, 2.5, 4),
   wallMaterial,
+  { collidable: true },
 );
 addBox(
   house,
@@ -104,6 +109,7 @@ addBox(
   new THREE.Vector3(4.25, 5, 0.35),
   new THREE.Vector3(3.875, 2.5, 4),
   wallMaterial,
+  { collidable: true },
 );
 addBox(
   house,
@@ -111,18 +117,21 @@ addBox(
   new THREE.Vector3(3.5, 2, 0.35),
   new THREE.Vector3(0, 4, 4),
   wallMaterial,
+  { collidable: true },
 );
 
-addBox(house, 'back wall', new THREE.Vector3(12, 5, 0.35), new THREE.Vector3(0, 2.5, -4), wallMaterial);
-addBox(house, 'left side wall', new THREE.Vector3(0.35, 5, 8), new THREE.Vector3(-6, 2.5, 0), wallMaterial);
-addBox(house, 'right side wall', new THREE.Vector3(0.35, 5, 8), new THREE.Vector3(6, 2.5, 0), wallMaterial);
+addBox(house, 'back wall', new THREE.Vector3(12, 5, 0.35), new THREE.Vector3(0, 2.5, -4), wallMaterial, { collidable: true });
+addBox(house, 'left side wall', new THREE.Vector3(0.35, 5, 8), new THREE.Vector3(-6, 2.5, 0), wallMaterial, { collidable: true });
+addBox(house, 'right side wall', new THREE.Vector3(0.35, 5, 8), new THREE.Vector3(6, 2.5, 0), wallMaterial, { collidable: true });
 addBox(house, 'flat roof cap', new THREE.Vector3(12.8, 0.6, 8.8), new THREE.Vector3(0, 5.3, 0), roofMaterial);
 addBox(house, 'doorway threshold marker', new THREE.Vector3(3.5, 0.08, 0.8), new THREE.Vector3(0, 0.04, 4.25), trimMaterial);
 
 scene.add(house);
+house.updateWorldMatrix(true, true);
+const houseColliders = collidableMeshes.map((mesh) => new THREE.Box3().setFromObject(mesh));
 
 const inputController = new InputController(canvas);
-const playerController = new PlayerController(player, { movementSpeed: 5 });
+const playerController = new PlayerController(player, { movementSpeed: 5, colliders: houseColliders });
 const cameraController = new CameraController(camera, player);
 const clock = new THREE.Clock();
 
