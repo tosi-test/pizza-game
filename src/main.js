@@ -1,13 +1,17 @@
 import * as THREE from '/node_modules/three/build/three.module.js';
 
+import { CameraController } from './cameraController.js';
+import { InputController } from './input.js';
+import { PlayerController } from './playerController.js';
+
 const canvas = document.querySelector('#game-canvas');
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87b9ff);
 
 const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 250);
-camera.position.set(0, 5, 13);
-camera.lookAt(0, 1, 0);
+camera.position.set(0, 1.45, 8);
+camera.lookAt(0, 1.45, 7);
 
 const renderer = new THREE.WebGLRenderer({
   antialias: true,
@@ -43,6 +47,7 @@ const playerBodyMaterial = new THREE.MeshStandardMaterial({ color: 0xffc857 });
 const playerBody = new THREE.Mesh(playerBodyGeometry, playerBodyMaterial);
 playerBody.position.y = 0.8;
 playerBody.castShadow = true;
+playerBody.visible = false;
 player.add(playerBody);
 
 const forwardMarkerGeometry = new THREE.ConeGeometry(0.28, 0.75, 4);
@@ -52,25 +57,39 @@ forwardMarker.name = 'Forward direction marker';
 forwardMarker.position.set(0, 1.15, -0.85);
 forwardMarker.rotation.x = -Math.PI / 2;
 forwardMarker.castShadow = true;
+forwardMarker.visible = false;
 player.add(forwardMarker);
 
 scene.add(player);
 
+const handMaterial = new THREE.MeshStandardMaterial({ color: 0xf1c27d, roughness: 0.75 });
+const leftHand = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 16), handMaterial);
+leftHand.position.set(-0.32, -0.3, -0.65);
+const rightHand = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 16), handMaterial);
+rightHand.position.set(0.32, -0.3, -0.65);
+camera.add(leftHand);
+camera.add(rightHand);
+scene.add(camera);
+
 const house = new THREE.Group();
 house.name = 'House made from separate wall boxes with doorway opening';
 house.position.set(0, 0, -12);
+const collidableMeshes = [];
 
 const wallMaterial = new THREE.MeshStandardMaterial({ color: 0xba6b42, roughness: 0.85 });
 const roofMaterial = new THREE.MeshStandardMaterial({ color: 0x5c2f1d, roughness: 0.8 });
 const trimMaterial = new THREE.MeshStandardMaterial({ color: 0xf5deb3, roughness: 0.75 });
 
-function addBox(parent, name, size, position, material) {
+function addBox(parent, name, size, position, material, { collidable = false } = {}) {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(size.x, size.y, size.z), material);
   mesh.name = name;
   mesh.position.copy(position);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   parent.add(mesh);
+  if (collidable) {
+    collidableMeshes.push(mesh);
+  }
   return mesh;
 }
 
@@ -82,6 +101,7 @@ addBox(
   new THREE.Vector3(4.25, 5, 0.35),
   new THREE.Vector3(-3.875, 2.5, 4),
   wallMaterial,
+  { collidable: true },
 );
 addBox(
   house,
@@ -89,6 +109,7 @@ addBox(
   new THREE.Vector3(4.25, 5, 0.35),
   new THREE.Vector3(3.875, 2.5, 4),
   wallMaterial,
+  { collidable: true },
 );
 addBox(
   house,
@@ -96,54 +117,23 @@ addBox(
   new THREE.Vector3(3.5, 2, 0.35),
   new THREE.Vector3(0, 4, 4),
   wallMaterial,
+  { collidable: true },
 );
 
-addBox(house, 'back wall', new THREE.Vector3(12, 5, 0.35), new THREE.Vector3(0, 2.5, -4), wallMaterial);
-addBox(house, 'left side wall', new THREE.Vector3(0.35, 5, 8), new THREE.Vector3(-6, 2.5, 0), wallMaterial);
-addBox(house, 'right side wall', new THREE.Vector3(0.35, 5, 8), new THREE.Vector3(6, 2.5, 0), wallMaterial);
+addBox(house, 'back wall', new THREE.Vector3(12, 5, 0.35), new THREE.Vector3(0, 2.5, -4), wallMaterial, { collidable: true });
+addBox(house, 'left side wall', new THREE.Vector3(0.35, 5, 8), new THREE.Vector3(-6, 2.5, 0), wallMaterial, { collidable: true });
+addBox(house, 'right side wall', new THREE.Vector3(0.35, 5, 8), new THREE.Vector3(6, 2.5, 0), wallMaterial, { collidable: true });
 addBox(house, 'flat roof cap', new THREE.Vector3(12.8, 0.6, 8.8), new THREE.Vector3(0, 5.3, 0), roofMaterial);
 addBox(house, 'doorway threshold marker', new THREE.Vector3(3.5, 0.08, 0.8), new THREE.Vector3(0, 0.04, 4.25), trimMaterial);
 
 scene.add(house);
+house.updateWorldMatrix(true, true);
+const houseColliders = collidableMeshes.map((mesh) => new THREE.Box3().setFromObject(mesh));
 
-const keysPressed = new Set();
-const movementSpeed = 5;
-const turnSpeed = 2.8;
+const inputController = new InputController(canvas);
+const playerController = new PlayerController(player, { movementSpeed: 5, colliders: houseColliders });
+const cameraController = new CameraController(camera, player);
 const clock = new THREE.Clock();
-
-window.addEventListener('keydown', (event) => {
-  keysPressed.add(event.code);
-});
-
-window.addEventListener('keyup', (event) => {
-  keysPressed.delete(event.code);
-});
-
-function updatePlayer(deltaTime) {
-  if (keysPressed.has('KeyA') || keysPressed.has('ArrowLeft')) {
-    player.rotation.y += turnSpeed * deltaTime;
-  }
-
-  if (keysPressed.has('KeyD') || keysPressed.has('ArrowRight')) {
-    player.rotation.y -= turnSpeed * deltaTime;
-  }
-
-  const forwardInput =
-    Number(keysPressed.has('KeyW') || keysPressed.has('ArrowUp')) -
-    Number(keysPressed.has('KeyS') || keysPressed.has('ArrowDown'));
-
-  if (forwardInput !== 0) {
-    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(player.quaternion);
-    player.position.addScaledVector(forward, forwardInput * movementSpeed * deltaTime);
-  }
-}
-
-function updateCamera() {
-  const cameraOffset = new THREE.Vector3(0, 4.5, 8).applyQuaternion(player.quaternion);
-  const targetPosition = player.position.clone().add(cameraOffset);
-  camera.position.lerp(targetPosition, 0.16);
-  camera.lookAt(player.position.x, player.position.y + 1.1, player.position.z);
-}
 
 function resizeRenderer() {
   const width = window.innerWidth;
@@ -164,8 +154,9 @@ function render() {
   const deltaTime = Math.min(clock.getDelta(), 0.05);
 
   resizeRenderer();
-  updatePlayer(deltaTime);
-  updateCamera();
+  cameraController.applyPointerDelta(inputController.consumePointerDelta());
+  playerController.update(deltaTime, inputController.getMovementVector(), cameraController.getYaw());
+  cameraController.update(deltaTime);
   renderer.render(scene, camera);
 
   requestAnimationFrame(render);
