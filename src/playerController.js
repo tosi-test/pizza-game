@@ -8,12 +8,13 @@ const colliderMin = new THREE.Vector3();
 const colliderMax = new THREE.Vector3();
 
 export class PlayerController {
-  constructor(player, { movementSpeed = 5, rotationSmoothing = 18, colliders = [], playerRadius = 0.45 } = {}) {
+  constructor(player, { movementSpeed = 5, rotationSmoothing = 18, colliders = [], playerRadius = 0.45, playerHeight = 1.7 } = {}) {
     this.player = player;
     this.movementSpeed = movementSpeed;
     this.rotationSmoothing = rotationSmoothing;
     this.colliders = colliders;
     this.playerRadius = playerRadius;
+    this.playerHeight = playerHeight;
   }
 
   update(deltaTime, movementInput, cameraYaw) {
@@ -56,8 +57,11 @@ export class PlayerController {
 
       const insideX = position.x >= colliderMin.x && position.x <= colliderMax.x;
       const insideZ = position.z >= colliderMin.z && position.z <= colliderMax.z;
+      const playerBottom = this.player.position.y;
+      const playerTop = playerBottom + this.playerHeight;
+      const overlapsY = playerTop >= collider.min.y && playerBottom <= collider.max.y;
 
-      if (insideX && insideZ) {
+      if (insideX && insideZ && overlapsY) {
         return true;
       }
     }
